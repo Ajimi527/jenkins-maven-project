@@ -19,17 +19,15 @@ pipeline {
             }
         }
         
-        // NEW DEPLOYMENT STAGE
-        stage('Simulate Deployment') {
+        // NEW ARTIFACT ARCHIVING STAGE
+        stage('Archive Artifact') {
             steps {
-                echo 'Simulating deployment of the application artifact...'
-                // Assumes your artifact is built to 'target/student-management-0.0.1-SNAPSHOT.jar'
-                // This command simply verifies the artifact exists after the build
-                sh 'ls -l target/student-management-0.0.1-SNAPSHOT.jar'
-                
-                // You could add commands here to copy the artifact to a deployment directory
-                // or use SSH commands (like 'sshpass' or 'scp') for a real deployment.
-                echo 'Deployment simulation successful.'
+                echo 'Archiving the generated JAR file...'
+                // Archives the JAR file created in the target directory
+                // Filename structure: target/artifactID-version.jar
+                archiveArtifacts artifacts: 'target/student-management-0.0.1-SNAPSHOT.jar', 
+                                   fingerprint: true
+                echo 'Artifact successfully archived.'
             }
         }
     }
