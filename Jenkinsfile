@@ -34,7 +34,7 @@ pipeline {
                 script {
                     // Define the Docker image name and tag
                     // REPLACE 'your_dockerhub_username' with your actual Docker Hub ID
-                    def imageTag = "your_dockerhub_username/student-app:${env.BUILD_NUMBER}"
+                    def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
                     
                     // Build the Docker image
                     // -t: tag the image
