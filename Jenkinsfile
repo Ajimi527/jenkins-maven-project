@@ -40,7 +40,7 @@ pipeline {
                     // -t: tag the image
                     // .: the build context is the root of the project, which contains the 'target' folder and 'docker/Dockerfile'
                     // -f: specify the path to the Dockerfile
-                    sh "docker build -t ${imageTag} -f docker/Dockerfile ."
+                    sh "sudo docker build -t ${imageTag} -f docker/Dockerfile ."
                 }
             }
         }
