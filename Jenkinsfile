@@ -35,7 +35,7 @@ pipeline {
                     def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
                     
                     // Build the Docker image
-                    sh "docker build -t ${imageTag} -f docker/Dockerfile ."
+                    sh "docker build -t ${imageTag} -f Dockerfile ."
                 }
             }
         }
