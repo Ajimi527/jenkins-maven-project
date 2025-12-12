@@ -32,15 +32,33 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Define the Docker image name and tag
-                    // REPLACE 'your_dockerhub_username' with your actual Docker Hub ID
                     def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
                     
                     // Build the Docker image
-                    // -t: tag the image
-                    // .: the build context is the root of the project, which contains the 'target' folder and 'docker/Dockerfile'
-                    // -f: specify the path to the Dockerfile
-                    sh "docker build -t ${imageTag} -f Dockerfile ."
+                    sh "docker build -t ${imageTag} -f docker/Dockerfile ."
+                }
+            }
+        }
+        
+        // **********************************************
+        // ********* NEW DOCKER LOGIN & PUSH STAGE *******
+        // **********************************************
+        stage('Push to Docker Hub') {
+            steps {
+                // Use the 'dockerhub' credential ID you configured in Jenkins
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
+                    script {
+                        def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
+
+                        // 1. Docker Login: Use the variables defined by withCredentials
+                        sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
+                        
+                        // 2. Docker Push: Push the newly built image
+                        sh "docker push ${imageTag}"
+                        
+                        // 3. Optional: Logout after pushing
+                        sh "docker logout"
+                    }
                 }
             }
         }
