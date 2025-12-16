@@ -1,64 +1,46 @@
 pipeline {
     agent any
     tools {
-        // This must match the name in Jenkins > Manage Jenkins > Global Tool Configuration
         maven 'LocalMaven' 
     }
     
     stages {
-        stage('Checkout') {
-            steps {
-                // Checkout is implicit when using Pipeline from SCM
-                echo 'Checking out source code...'
-            }
-        }
+        // ... (Stages Checkout, Build, Build Docker Image restent inchangés) ...
         
-        stage('Build') {
-            steps {
-                // Compile the code, skip tests (-DskipTests) and package it into a JAR
-                sh "mvn clean package -DskipTests"
-            }
-            post {
-                success {
-                    // Archive the resulting JAR artifact
-                    archiveArtifacts artifacts: 'target/student-management-0.0.1-SNAPSHOT.jar', onlyIfSuccessful: true
-                }
-            }
-        }
-        
-        // **********************************************
-        // ********* NEW DOCKER STAGE ADDED HERE ********
-        // **********************************************
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
-                    
-                    // Build the Docker image
-                    sh "docker build -t ${imageTag} -f Dockerfile ."
-                }
-            }
-        }
-        
-        // **********************************************
-        // ********* NEW DOCKER LOGIN & PUSH STAGE *******
-        // **********************************************
         stage('Push to Docker Hub') {
             steps {
-                // Use the 'dockerhub' credential ID you configured in Jenkins
                 withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
                     script {
                         def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
-
-                        // 1. Docker Login: Use the variables defined by withCredentials
                         sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
-                        
-                        // 2. Docker Push: Push the newly built image
                         sh "docker push ${imageTag}"
-                        
-                        // 3. Optional: Logout after pushing
                         sh "docker logout"
                     }
+                }
+            }
+        }
+        
+        // **************************************************
+        // ********* NOUVELLE ÉTAPE : DEPLOIEMENT K8S *******
+        // **************************************************
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
+                    def kubeConfigPath = "/home/vagrant/.kube/config"
+
+                    // 1. Remplacer le tag dans le YAML
+                    // Nous allons utiliser 'sed' pour injecter le nouveau tag
+                    // dans le fichier spring-deployment.yaml avant de l'appliquer.
+                    // Le répertoire de travail de Jenkins est /var/lib/jenkins/workspace/pipeline-maven
+                    // Le fichier est accessible via le chemin partagé /vagrant/kubernetes
+                    sh "sed -i 's|ajimi0/student-app:.*|ajimi0/student-app:${env.BUILD_NUMBER}|' /vagrant/kubernetes/spring-deployment.yaml"
+                    
+                    // 2. Déployer l'application
+                    // On définit la variable d'environnement KUBECONFIG avant d'exécuter kubectl
+                    // Cela indique à kubectl où trouver le fichier de configuration du cluster.
+                    sh "KUBECONFIG=${kubeConfigPath} kubectl apply -f /vagrant/kubernetes/spring-deployment.yaml"
+                    
                 }
             }
         }
