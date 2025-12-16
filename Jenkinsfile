@@ -28,7 +28,7 @@ pipeline {
             steps {
                 script {
                     def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
-                    def kubeConfigPath = "/opt/config"
+                    def kubeConfigPath = "/var/lib/jenkins/.kube/config"
 
                     // 1. Remplacer le tag dans le YAML
                     // Nous allons utiliser 'sed' pour injecter le nouveau tag
