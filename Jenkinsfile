@@ -13,7 +13,7 @@ pipeline {
                     script {
                         def imageTag = "ajimi0/student-app:${env.BUILD_NUMBER}"
                         sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
-                        sh "docker build ${imageTag}"
+                        sh "docker build . -t ${imageTag}"
                         sh "docker push ${imageTag}"
                         sh "docker logout"
                     }
