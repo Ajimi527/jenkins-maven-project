@@ -35,12 +35,12 @@ pipeline {
                     // dans le fichier spring-deployment.yaml avant de l'appliquer.
                     // Le répertoire de travail de Jenkins est /var/lib/jenkins/workspace/pipeline-maven
                     // Le fichier est accessible via le chemin partagé /vagrant/kubernetes
-                    sh "sed -i 's|ajimi0/student-app:.*|ajimi0/student-app:${env.BUILD_NUMBER}|' /vagrant/kubernetes/spring-deployment.yaml"
+                    sh "sed -i 's|ajimi0/student-app:.*|ajimi0/student-app:${env.BUILD_NUMBER}|' spring-deployment.yaml"
                     
                     // 2. Déployer l'application
                     // On définit la variable d'environnement KUBECONFIG avant d'exécuter kubectl
                     // Cela indique à kubectl où trouver le fichier de configuration du cluster.
-                    sh "KUBECONFIG=${kubeConfigPath} kubectl apply -f /vagrant/kubernetes/spring-deployment.yaml"
+                    sh "KUBECONFIG=${kubeConfigPath} kubectl apply -f spring-deployment.yaml"
                     
                 }
             }
