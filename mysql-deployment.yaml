@@ -1,97 +1,89 @@
 ---
-# 1. ConfigMap (pour l'URL de la base de données)
-# Stocke l'URL de la DB (mysql-service est le nom du Service ClusterIP)
+# 1. PersistentVolume (PV)
+# Définit une ressource de stockage concrète sur le nœud Minikube.
 apiVersion: v1
-kind: ConfigMap
+kind: PersistentVolume
 metadata:
-  name: spring-config
-  namespace: devops
-data:
-  # L'URL utilise le nom du service MySQL interne (mysql-service)
-  # Le port 3306 est celui exposé par le service MySQL
-  SPRING_DATASOURCE_URL: jdbc:mysql://mysql-service:3306/student_db?useSSL=false
-  SPRING_JPA_HIBERNATE_DDL_AUTO: update
+  name: mysql-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    # Ceci est le chemin sur le nœud Minikube où les données seront stockées.
+    path: "/mnt/data/mysql-data" 
 
 ---
-# 1. Secret (pour l'utilisateur et le mot de passe de la DB)
-# Stocke les informations sensibles. Les valeurs doivent être encodées en Base64.
-# Pour le workshop, on utilise des chaînes non encodées pour la simplicité, mais en production, ce serait Base64.
+# 2. PersistentVolumeClaim (PVC)
+# Demande de stockage faite par l'application, qui sera liée au PV ci-dessus.
 apiVersion: v1
-kind: Secret
+kind: PersistentVolumeClaim
 metadata:
-  name: spring-secret
-  namespace: devops
-type: Opaque
-stringData:
-  SPRING_DATASOURCE_USERNAME: root
-  # ATTENTION : Ce mot de passe DOIT correspondre à MYSQL_ROOT_PASSWORD dans mysql-deployment.yaml
-  SPRING_DATASOURCE_PASSWORD: my-secret-root-password
+  name: mysql-pv-claim
+  namespace: devops # Assurez-vous que le namespace correspond
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
 
 ---
-# 2. Deployment Spring Boot
-# Crée le Pod exécutant votre application Docker
+# 3. Deployment MySQL
+# Crée le Pod (conteneur) MySQL et utilise la réclamation de volume (PVC).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: spring-deployment
+  name: mysql-deployment
   namespace: devops
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: spring-app
+      app: mysql
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
-        app: spring-app
+        app: mysql
     spec:
       containers:
-      - name: spring-app
-        # !!! REMPLACER [YOUR_IMAGE_TAG] par votre tag d'image Docker Hub !!!
-        image: ajimi0/student-app:1 
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8080
+      - image: mysql:8.0
+        name: mysql
         env:
-        # Configuration des variables d'environnement
-        # Récupération de l'URL depuis la ConfigMap
-        - name: SPRING_DATASOURCE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: spring-config
-              key: SPRING_DATASOURCE_URL
-        # Récupération de l'auto-ddl depuis la ConfigMap
-        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-          valueFrom:
-            configMapKeyRef:
-              name: spring-config
-              key: SPRING_JPA_HIBERNATE_DDL_AUTO
-        # Récupération du username et password depuis le Secret
-        - name: SPRING_DATASOURCE_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: spring-secret
-              key: SPRING_DATASOURCE_USERNAME
-        - name: SPRING_DATASOURCE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: spring-secret
-              key: SPRING_DATASOURCE_PASSWORD
+        - name: MYSQL_ROOT_PASSWORD
+          # !!! REMPLACER VOTRE MOT DE PASSE !!!
+          value: my-secret-root-password 
+        - name: MYSQL_DATABASE
+          value: student_db
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
 
 ---
-# 3. Service (NodePort)
-# Expose l'application Spring Boot en dehors du cluster (sur le NodePort)
+# 4. Service MySQL (ClusterIP)
+# Expose la base de données aux autres Pods internes du cluster.
 apiVersion: v1
 kind: Service
 metadata:
-  name: spring-service
+  name: mysql-service
   namespace: devops
 spec:
-  selector:
-    app: spring-app
-  type: NodePort # Utilisation de NodePort pour accéder facilement depuis la VM hôte
   ports:
-    - protocol: TCP
-      port: 8080        # Port du service (interne au cluster)
-      targetPort: 8080  # Port du Pod (port d'écoute de Spring Boot)
-      nodePort: 30080   # Port externe du Node (accessible sur l'IP de Minikube)
+  - port: 3306
+  selector:
+    app: mysql
+  # ClusterIP est le type par défaut pour les services internes
+  type: ClusterIP
