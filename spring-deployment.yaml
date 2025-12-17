@@ -51,7 +51,7 @@ spec:
         image: ajimi0/student-app:1 
         imagePullPolicy: Always
         ports:
-        - containerPort: 8080
+        - containerPort: 8089
         env:
         # Configuration des variables d'environnement
         # Récupération de l'URL depuis la ConfigMap
@@ -92,6 +92,6 @@ spec:
   type: NodePort # Utilisation de NodePort pour accéder facilement depuis la VM hôte
   ports:
     - protocol: TCP
-      port: 8080        # Port du service (interne au cluster)
-      targetPort: 8080  # Port du Pod (port d'écoute de Spring Boot)
+      port: 8089        # Port du service (interne au cluster)
+      targetPort: 8089  # Port du Pod (port d'écoute de Spring Boot)
       nodePort: 30080   # Port externe du Node (accessible sur l'IP de Minikube)
