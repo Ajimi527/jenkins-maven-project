@@ -9,7 +9,7 @@ metadata:
 data:
   # L'URL utilise le nom du service MySQL interne (mysql-service)
   # Le port 3306 est celui exposé par le service MySQL
-  SPRING_DATASOURCE_URL: jdbc:mysql://mysql-service:3306/student_db?useSSL=false
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql-service:3306/student_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
   SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
 ---
